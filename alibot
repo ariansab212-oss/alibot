@@ -1,0 +1,141 @@
+cat << 'EOF' > alibot.py
+import telebot
+from telebot import types
+import random
+import time
+import threading
+
+BOT_TOKEN = "8647975211:AAGKsv-fr9YfIg_hKVWzcd6U9f9ER-K9NuQ"
+bot = telebot.TeleBot(BOT_TOKEN)
+
+CHANNEL_USERNAME = "@arian_numbers"  
+GROUP_USERNAME = "@MyOtpGroup123"    
+
+CHANNEL_LINK = "https://t.me"
+GROUP_LINK = "https://t.me"
+BOT_LINK = "https://t.me"
+
+SERVICES = {
+    "imo": "imo",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "tiktok": "TikTok"
+}
+
+COUNTRIES = {
+    "afghanistan": {"name": "Afghanistan", "flag": "🇦🇫", "prefix": "93", "digits": 9, "tag": "AF", "start_with": ["70", "79", "78", "77", "74"]},
+    "pakistan": {"name": "Pakistan", "flag": "🇵🇰", "prefix": "92", "digits": 10, "tag": "PK", "start_with": ["30", "31", "33", "34"]},
+    "iraq": {"name": "Iraq", "flag": "🇮🇶", "prefix": "964", "digits": 10, "tag": "IQ", "start_with": ["77", "78", "75"]},
+    "mali": {"name": "Mali", "flag": "🇲🇱", "prefix": "223", "digits": 8, "tag": "MA", "start_with": ["6", "7", "9"]},
+    "sudan": {"name": "Sudan", "flag": "🇸🇩", "prefix": "249", "digits": 9, "tag": "SD", "start_with": ["9", "1"]},
+    "usa": {"name": "United States", "flag": "🇺🇸", "prefix": "1", "digits": 10, "tag": "US", "start_with": ["201", "302", "415", "646"]},
+    "uk": {"name": "United Kingdom", "flag": "🇬🇧", "prefix": "44", "digits": 10, "tag": "UK", "start_with": ["71", "72", "73", "74"]}
+}
+
+def check_membership(user_id):
+    try:
+        c_s = bot.get_chat_member(CHANNEL_USERNAME, user_id).status
+        g_s = bot.get_chat_member(GROUP_USERNAME, user_id).status
+        return c_s in ['creator', 'administrator', 'member'] and g_s in ['creator', 'administrator', 'member']
+    except: return False
+
+@bot.message_handler(commands=['start'])
+def start_bot(message):
+    if check_membership(message.from_user.id): show_main_menu(message.chat.id)
+    else:
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        markup.add(types.InlineKeyboardButton("📢 Ali_NUMBERS", url=CHANNEL_LINK), types.InlineKeyboardButton("💬 MyOtpGroup123", url=GROUP_LINK), types.InlineKeyboardButton("🟢 Verify", callback_data="verify_sub"))
+        bot.send_message(message.chat.id, "ACCESS REQUIRED\n\nYou must join all channels below to use this bot.", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "verify_sub")
+def verify_subscription(call):
+    if check_membership(call.from_user.id):
+        bot.answer_callback_query(call.id, "✅ OK")
+        bot.delete_message(call.message.chat.id, call.message.id)
+        show_main_menu(call.message.chat.id)
+    else: bot.answer_callback_query(call.id, "❌ Error", show_alert=True)
+
+def show_main_menu(chat_id):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(types.KeyboardButton("Get Number"), types.KeyboardButton("💬 OTP Group"))
+    markup.add(types.KeyboardButton("Refer & Earn"), types.KeyboardButton("Withdraw"))
+    bot.send_message(chat_id, "Welcome to Main Menu:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text == "Get Number")
+def service_menu(message):
+    if not check_membership(message.from_user.id): return start_bot(message)
+    markup = types.InlineKeyboardMarkup(row_width=1)
+    for k, v in SERVICES.items():
+        markup.add(types.InlineKeyboardButton(f"{v}", callback_data=f"srv_{k}"))
+    bot.send_message(message.chat.id, "Select a service👇", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
+def choose_country(call):
+    bot.answer_callback_query(call.id)
+    service = call.data.replace("srv_", "")
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btns = [types.InlineKeyboardButton(f"{c['flag']} {c['name']}", callback_data=f"num_{service}_{k}") for k, c in COUNTRIES.items()]
+    markup.add(*btns)
+    markup.add(types.InlineKeyboardButton("⬅️ Back", callback_data="back_to_srv"))
+    bot.edit_message_text(f"Choose Country for {SERVICES[service]}", call.message.chat.id, call.message.id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "back_to_srv")
+def back_services(call):
+    bot.answer_callback_query(call.id)
+    bot.delete_message(call.message.chat.id, call.message.id)
+    service_menu(call.message)
+
+def send_palestine_style_otp(crypto_num, service_name, c_info):
+    time.sleep(15) 
+    otp_part1 = random.randint(100, 999)
+    otp_part2 = random.randint(100, 999)
+    full_otp_display = f"{otp_part1}-{otp_part2}"
+    
+    p_text = f"O|T|P Bot Palestine v2.0               admin\n"
+    p_text += f"{c_info['flag']} #{c_info['tag']} 🟢 `{crypto_num}` #English\n"
+    p_text += f"🐈 Prefix : {crypto_num[:7]}"
+    
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(types.InlineKeyboardButton(f"📋 {full_otp_display}", callback_data="ignore_copy"))
+    markup.add(types.InlineKeyboardButton("Number Channel ↗️", url=CHANNEL_LINK), types.InlineKeyboardButton("PLST V2.0 ↗️", url=BOT_LINK))
+    
+    try: 
+        bot.send_message(GROUP_USERNAME, p_text, reply_markup=markup, parse_mode="Markdown")
+        bot.send_message(CHANNEL_USERNAME, p_text, reply_markup=markup, parse_mode="Markdown")
+    except: pass
+
+@bot.callback_query_handler(func=lambda call: call.data == "ignore_copy")
+def ignore_copy_msg(call):
+    bot.answer_callback_query(call.id, "Click code text to copy!", show_alert=True)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("num_"))
+def process_number(call):
+    bot.answer_callback_query(call.id)
+    raw_data = call.data.replace("num_", "").split("_")
+    service_name = raw_data[0]
+    country_key = raw_data[1]
+    
+    c_info = COUNTRIES[country_key]
+    s_name = SERVICES[service_name]
+    
+    network_start = random.choice(c_info["start_with"])
+    remaining_len = c_info["digits"] - len(network_start)
+    rand_rest = "".join([str(random.randint(0, 9)) for _ in range(remaining_len)])
+    
+    real_clean_phone = f"+{c_info['prefix']}{network_start}{rand_rest}"
+    crypto_phone_display = f"{c_info['prefix']}{network_start}LSD{rand_rest}"
+
+    user_msg = f"════════《 📱 {s_name.upper()} NUMBERS 》════════\n\n"
+    user_msg += f"👉 د کاپي کولو لپاره په شمیره کلیک وکړه:\n\n"
+    user_msg += f"1️⃣ : `{real_clean_phone}`\n\n"
+    user_msg += f"☝️ شمیره کاپي کړه او په واټساپ کې یې ووهه. کوډ به سمدستي ګروپ او چینل ته واستول شي!"
+    
+    bot.send_message(call.message.chat.id, user_msg, parse_mode="Markdown")
+    threading.Thread(target=send_palestine_style_otp, args=(crypto_phone_display, service_name, c_info)).start()
+
+@bot.message_handler(func=lambda message: message.text in ["Refer & Earn", "Withdraw"])
+def fallback_buttons(message): bot.send_message(message.chat.id, f"Balance: $0.00")
+
+print("🤖 د فلسطین باوري بوټ ستا په موبایل کې روښانه شو...")
+bot.polling(none_stop=True)
+EOF
